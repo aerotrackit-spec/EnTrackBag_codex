@@ -1,0 +1,51 @@
+<section>
+  <div class="cards">
+    <article><b>{{ bags.length || '—' }}</b><span>Active Bags Now</span></article>
+    <article><b>{{ oldest }}</b><span>Oldest Active Bag</span></article>
+    <article><b>{{ breaches }}</b><span>Bags Over SLA</span></article>
+  </div>
+
+  <div class="map-panel">
+    <h2>Operational Map</h2>
+    <div class="mapbox">Operational map integration point — locations and counts must come from verified operational data.</div>
+  </div>
+
+  <div class="content-grid">
+    <div class="table-panel">
+      <h2>SLA Monitoring</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Bag ID</th><th>Tagged At</th><th>Last Stage</th><th>Last Seen</th><th>Dwell Time</th><th>SLA Threshold</th><th>SLA Breach</th><th>Status</th><th>History</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let b of bags">
+              <td>{{ b.bagId }}</td>
+              <td>{{ b.taggedAt | date:'short' }}</td>
+              <td>{{ b.lastStage }}</td>
+              <td>{{ b.lastSeen | date:'short' }}</td>
+              <td>{{ b.dwellTime }}</td>
+              <td>{{ b.threshold }}</td>
+              <td>{{ b.breached ? 'Yes' : 'No' }}</td>
+              <td>{{ b.status }}</td>
+              <td><button type="button" (click)="history(b.bagId)">History</button></td>
+            </tr>
+            <tr *ngIf="bags.length === 0"><td colspan="9" class="empty">No active bag records returned.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <aside class="history-panel" *ngIf="selectedHistory">
+      <h2>Bag History</h2>
+      <p><strong>Bag:</strong> {{ selectedHistory.bagId }}</p>
+      <p><strong>Status:</strong> {{ selectedHistory.status }}</p>
+      <p><strong>Tagged:</strong> {{ selectedHistory.taggedAt | date:'short' }}</p>
+      <p><strong>Last Seen:</strong> {{ selectedHistory.lastSeen | date:'short' }}</p>
+      <div *ngFor="let step of selectedHistory.steps" class="history-step">
+        <strong>{{ step.stage }}</strong>
+        <span>{{ step.timestamp | date:'short' }}</span>
+      </div>
+    </aside>
+  </div>
+</section>

@@ -1,0 +1,40 @@
+<main class="login-page">
+  <!-- 1. Wrap your structure in a Template-Driven Form tag linked to an implicit ngForm context -->
+  <form #loginForm="ngForm" class="login-card">
+    <div class="login-brand"><img src="assets/entrackbag-logo.png" alt="EnTrackBag logo"><div><h1>EnTrackBag</h1><p>Operational monitoring</p></div></div>
+
+    <label
+      >Username
+      <input
+        name="username"
+        [(ngModel)]="userName"
+        autocomplete="username"
+        placeholder="Username"
+        required
+      />
+    </label>
+
+    <label
+      >Password
+      <input
+        name="password"
+        [(ngModel)]="password"
+        autocomplete="current-password"
+        [type]="showPassword.checked ? 'text' : 'password'"
+        placeholder="Password"
+        required
+      />
+    </label>
+
+    <label class="show-password-label">
+      <input type="checkbox" #showPassword (change)="(0)" />
+      <span>Show Password</span>
+    </label>
+
+    <button type="button" (click)="login()" [disabled]="loginForm.invalid">
+      Sign in
+    </button>
+
+    <small *ngIf="error">{{ error }}</small>
+  </form>
+</main>

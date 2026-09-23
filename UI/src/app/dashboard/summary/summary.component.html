@@ -1,0 +1,18 @@
+<section>
+  <div class="cards">
+    <article><b>{{ kpi?.bagsTaggedToday ?? '—' }}</b><span>Bags Tagged Today</span></article>
+    <article><b>{{ kpi?.processedAtReclaimToday ?? '—' }}</b><span>Processed at Reclaim Today</span></article>
+    <article><b>{{ kpi?.processedAtExitToday ?? '—' }}</b><span>Processed at Exit Today</span></article>
+    <article><b>{{ kpi?.processedAtRecheckToday ?? '—' }}</b><span>Processed at Recheck Today</span></article>
+  </div>
+
+  <div class="map-panel">
+    <h2>Operational Map</h2>
+    <div class="mapbox">Operational map integration point — locations and counts must come from verified operational data.</div>
+  </div>
+
+  <div class="events-panel">
+    <h2>Recent Activity / System Events</h2>
+    <p class="muted">Live system events will appear here when the verified operational event source is connected.</p>
+  </div>
+</section>

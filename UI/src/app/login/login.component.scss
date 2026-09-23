@@ -1,0 +1,68 @@
+/* Keeps your existing card layout properties intact */
+.login-page {
+  min-height: calc(100vh - 56px);
+  display: grid;
+  place-items: center;
+}
+.login-card {
+  background: #fff;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px #0001;
+  width: 360px;
+}
+.login-card h1 {
+  margin: 0;
+}
+.login-brand { display: flex; align-items: center; gap: 13px; margin-bottom: 20px; }
+.login-brand img { width: 58px; height: 58px; object-fit: cover; border-radius: 12px; box-shadow: 0 7px 18px #0759f629; }
+.login-brand p { margin: 4px 0 0; }
+.login-card p {
+  color: #64748b;
+}
+.login-card label {
+  display: block;
+  font-size: 13px;
+  color: #526277;
+  margin-top: 14px;
+}
+.login-card input,
+.login-card button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+.login-card button {
+  background: #173d68;
+  color: #fff;
+  cursor: pointer;
+}
+.login-card small {
+  display: block;
+  color: #b91c1c;
+  margin-top: 12px;
+}
+
+/* ADDED: Overrides vertical behavior for the checkbox line */
+.login-card .show-password-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #64748b;
+  user-select: none;
+}
+
+.login-card .show-password-label input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
+.login-card .show-password-label span {
+  margin-top: 0;
+}

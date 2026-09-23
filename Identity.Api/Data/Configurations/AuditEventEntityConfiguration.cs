@@ -1,0 +1,4 @@
+using Identity.Api.Data.Entities; using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Metadata.Builders;
+namespace Identity.Api.Data.Configurations;
+public class AuditEventEntityConfiguration : IEntityTypeConfiguration<AuditEventEntity>
+{ public void Configure(EntityTypeBuilder<AuditEventEntity> e){ e.ToTable("AuditEvents","dbo"); e.HasKey(x=>x.Id); e.Property(x=>x.UserName).HasMaxLength(256); e.Property(x=>x.Action).HasMaxLength(200).IsRequired(); e.Property(x=>x.EntityType).HasMaxLength(200); e.Property(x=>x.EntityId).HasMaxLength(100); e.Property(x=>x.Description).HasMaxLength(2000); e.Property(x=>x.RemoteIp).HasMaxLength(64); e.Property(x=>x.UserAgent).HasMaxLength(1000); e.Property(x=>x.CorrelationId).HasMaxLength(100); e.HasOne<UserEntity>().WithMany().HasForeignKey(x=>x.UserId).OnDelete(DeleteBehavior.NoAction); e.HasOne<UserSessionEntity>().WithMany().HasForeignKey(x=>x.SessionId).OnDelete(DeleteBehavior.NoAction); } }

@@ -1,0 +1,85 @@
+@if (isLoginView()) {
+  <router-outlet></router-outlet>
+} @else {
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="brand-logo">
+        <div class="logo-icon"><img src="assets/entrackbag-logo.png" alt="EnTrackBag logo"></div>
+        <div><h2>EnTrackBag</h2><small>Abu Dhabi Airport</small></div>
+      </div>
+
+      <nav class="sidebar-menu" aria-label="Main navigation">
+        <div class="menu-group">
+          <div class="menu-header"><span class="nav-icon">⌂</span><strong>Dashboard</strong><span class="chevron">⌃</span></div>
+          <div class="submenu">
+            @if (auth.hasPermission('Dashboard')) { <a routerLink="/dashboard/summary" routerLinkActive="active"><i></i>Summary</a> }
+            @if (auth.hasAccess('Dashboard.SLA.View', 'VIEW')) { <a routerLink="/dashboard/sla" routerLinkActive="active"><i></i>SLA</a> }
+          </div>
+        </div>
+        @if (auth.hasPermission('BagJourney')) { <a routerLink="/bag-journey" routerLinkActive="active" class="menu-link"><span class="nav-icon">⌗</span>Tag / Bag Tracking</a> }
+        @if (auth.hasPermission('TagReport')) { <a routerLink="/tag-report" routerLinkActive="active" class="menu-link"><span class="nav-icon">▤</span>Reports</a> }
+        @if (auth.hasPermission('DeviceStatus')) { <a routerLink="/device-status" routerLinkActive="active" class="menu-link"><span class="nav-icon">⚙</span>Device & System Status</a> }
+        @if (auth.hasPermission('BagJourney.Configuration')) { <a routerLink="/bag-journey-configuration" routerLinkActive="active" class="menu-link"><span class="nav-icon">⌘</span>Bag Journey Configuration</a> }
+        @if (auth.hasPermission('Administration')) { <a routerLink="/administration" routerLinkActive="active" class="menu-link"><span class="nav-icon">♙</span>Administration</a> }
+      </nav>
+
+      <div class="language-toggle"><button class="active" type="button">EN</button><button type="button">العربية</button></div>
+    </aside>
+
+    <div class="workspace-wrapper">
+      <header class="topbar" aria-label="Page header">
+        <div class="topbar-title">
+          @if (pageHeader.title) {
+            <h1>{{ pageHeader.title }}</h1>
+            @if (pageHeader.subtitle) { <p>{{ pageHeader.subtitle }}</p> }
+          }
+        </div>
+
+        <div class="topbar-right">
+          @if (pageHeader.action === 'dashboard-toggle') {
+            <div class="view-toggle" role="tablist" aria-label="Dashboard view">
+              <a routerLink="/dashboard/summary" routerLinkActive="selected" [class.selected]="isSummaryRoute">Summary</a>
+              @if (auth.hasAccess('Dashboard.SLA.View', 'VIEW')) {
+                <a routerLink="/dashboard/sla" routerLinkActive="selected" [class.selected]="isSlaRoute">SLA</a>
+              }
+            </div>
+          }
+          @if (pageHeader.action === 'admin-refresh') {
+            <button class="page-refresh-button" type="button" (click)="onAdminRefresh()">
+              <span aria-hidden="true">↻</span> Refresh
+            </button>
+          }
+
+          <button class="icon-button" type="button" aria-label="Notifications" (click)="notifications.refresh()" [attr.title]="notifications.count() ? notifications.count() + ' SLA notifications' : 'No notifications'">
+            <img [src]="notifications.count() ? 'assets/notification-active.png' : 'assets/notification-empty.png'" alt="">
+            @if (notifications.count()) { <span>{{ notifications.count() > 99 ? '99+' : notifications.count() }}</span> }
+          </button>
+
+          <div class="profile-pill">
+            <div class="avatar-circle">{{ userInitial }}</div>
+            <div><strong>{{ displayName }}</strong><small>{{ roleLabel }}</small></div>
+          </div>
+
+          <div class="account-menu-wrap" (click)="$event.stopPropagation()">
+            <button class="settings-button" type="button" (click)="toggleAccountMenu($event)" title="Account settings" [attr.aria-expanded]="accountMenuOpen">
+              <img src="assets/gear.png" alt="Account settings">
+            </button>
+            @if (accountMenuOpen) {
+              <section class="account-menu" aria-label="Signed-in user details">
+                <div class="account-menu-heading"><span class="avatar-circle large">{{ userInitial }}</span><div><strong>{{ displayName }}</strong><small>{{ roleLabel }}</small></div></div>
+                <dl>
+                  <div><dt>User name</dt><dd>{{ auth.getUserName() }}</dd></div>
+                  <div><dt>Session ID</dt><dd>{{ auth.getSessionId() }}</dd></div>
+                  <div><dt>Session expires</dt><dd>{{ sessionExpiry }}</dd></div>
+                </dl>
+                <button class="menu-logout" type="button" (click)="logout()"><span>↪</span> Sign out</button>
+              </section>
+            }
+          </div>
+        </div>
+      </header>
+
+      <main class="page-shell-viewport"><router-outlet></router-outlet></main>
+    </div>
+  </div>
+}

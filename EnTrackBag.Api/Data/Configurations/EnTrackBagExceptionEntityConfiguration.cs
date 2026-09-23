@@ -1,0 +1,24 @@
+using EnTrackBag.Api.Data.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+namespace EnTrackBag.Api.Data.Configurations;
+
+public class EnTrackBagExceptionEntityConfiguration : IEntityTypeConfiguration<EnTrackBagExceptionEntity>
+{
+    public void Configure(EntityTypeBuilder<EnTrackBagExceptionEntity> e)
+    {
+        e.ToTable("EnTrackBagExceptions", "dbo");
+        e.HasKey(x => x.ExceptionID);
+        e.Property(x => x.ExceptionID).ValueGeneratedOnAdd();
+        e.Property(x => x.CorrelationId).HasMaxLength(100);
+        e.Property(x => x.HttpMethod).HasMaxLength(20);
+        e.Property(x => x.RequestPath).HasMaxLength(1000);
+        e.Property(x => x.QueryString).HasMaxLength(2000);
+        e.Property(x => x.ExceptionType).HasMaxLength(500);
+        e.Property(x => x.Message).HasMaxLength(4000);
+        e.Property(x => x.UserName).HasMaxLength(256);
+        e.Property(x => x.RemoteIp).HasMaxLength(64);
+        e.Property(x => x.UserAgent).HasMaxLength(1000);
+        e.Property(x => x.Source).HasMaxLength(100);
+    }
+}

@@ -1,0 +1,885 @@
+ENTRACKBAG — MASTER PROMPT / REQUIREMENTS BASELINE
+Version: Requirements discussed through 07 Sep 2026
+
+SOURCE OF TRUTH
+- Use the supplied requirements/screenshots and agreed decisions as the baseline.
+- Existing BLTSMFT SQL Server is the operational source of truth.
+- Never invent operational data, database fields, device relationships, counts, or telemetry.
+- Verify the actual schema before final EF mappings.
+
+TECH STACK
+- Angular 19
+- .NET 10 Web API
+- Entity Framework Core
+- SQL Server
+- SignalR
+- On-premises deployment
+
+ARCHITECTURE
+Existing EnTrackBag components
+  - Tagging Station
+  - DataProcessor_S1: Tagging Read Point, DogHouse Airside, DogHouse Landside
+  - CS_ADG2: Exit Gate reader + ADAM controller
+        -> BLTSMFT SQL Server
+        -> EnTrackBag .NET 10 API
+        -> SignalR / HTTP
+        -> Angular 19 UI
+        -> Browser
+
+Do not replace the existing Tagging Station, DataProcessor_S1, CS_ADG2, reader services, or operational processing.
+
+DEVICE & SYSTEM STATUS
+The page monitors four groups:
+
+a) TAGGING STATION
+- Touchscreen PC
+- PROFINET
+- Camera, where applicable as per project scope
+- Do NOT show RFID antenna A1-A8 columns for Tagging Station.
+
+b) READ POINTS
+- RFID Readers
+- ATR, where applicable as per project scope
+Known read points include:
+- Tagging Read Point
+- Dog House Airside
+- Dog House Landside
+
+c) EXIT GATE
+- RFID Readers
+- Controller
+Existing architecture includes CS_ADG2, an Exit Gate reader and ADAM controller.
+
+d) WORKSTATIONS
+- Recheck Station
+- Monitoring Station
+
+DEVICE SUMMARY
+Top cards:
+- Total Tagging Stations: Total / Online / Offline
+- Total Readers: Total / Online / Offline
+- Total Antennas: Total / Online / Offline
+- Total Controllers: Total / Online / Offline
+
+Screenshot numbers are examples only. Never hard-code them.
+
+DEVICE STATUS SUMMARY
+Show categories such as:
+- Tagging Station
+- Tagging Read Point
+- Dog House Airside
+- Dog House Landside
+- Exit Gate
+- Inside Lounge
+- Exit Lounge
+- BHS Return Feed
+- Recheck Station
+
+Columns:
+Device Type | Total | Online | Offline
+
+Also support identification of:
+Device Category | Device Name | Device Location | Status
+
+STATUS DEFINITIONS
+- Online: device is powered and communicating normally over the network.
+- Warning: device is reachable, but an abnormal condition requires attention.
+- Offline: device is not communicating or is unavailable on the network.
+
+Warning must not be fabricated. Use an approved rule based on actual alarm/error data if required.
+
+DEVICE DETAILS — CONTEXT SENSITIVE
+Do NOT create one generic table containing every possible field. Change the displayed columns according to the selected Device Type.
+
+TAGGING STATION DETAILS
+Possible supported fields:
+- ID
+- Status
+- Device Code
+- Device Name
+- Location
+- IP/network information
+- Touchscreen PC status, if available
+- PROFINET status, if available
+- Camera status, if applicable and supported
+- Last Seen / connection information
+Never fabricate PC, PROFINET, Camera, power, application, or queue data.
+
+READER DETAILS
+Possible fields:
+- Reader ID
+- Reader Code
+- Location
+- Reader IP
+- Reader Port
+- Hostname
+- Status
+- Last Connected
+- Last Disconnected
+- Last Error
+- configured antenna-port records
+
+CONTROLLER DETAILS
+Possible fields:
+- Controller identity/code
+- Name
+- Location
+- IP
+- Status
+- Last Connected
+- Last Disconnected
+- Last Error
+
+WORKSTATION DETAILS
+Show only information relevant to Recheck Station or Monitoring Station.
+
+ANTENNA RULES
+- Preserve Reader -> Antenna relationship through existing ReaderID.
+- One antenna record must not be assigned to multiple readers.
+- An FX9600 has 8 ports, but never assume 8 ports = 8 physical antennas.
+- Count configured Antennas rows for the ReaderID when appropriate.
+- Physical single-pin/double-pin grouping is unknown unless the existing system explicitly represents it.
+- Show configured/used ports and their status.
+- Connected = Green.
+- Not Connected = Red.
+- Unused/not configured port = Idle/neutral.
+- Do not invent physical antenna counts.
+
+DATABASE CONCEPTS ALREADY IDENTIFIED
+Existing BLTSMFT concepts include:
+- AlarmList
+- LogicalDevice
+- LogicalDeviceMap
+- LogicalDeviceType
+- Readers
+- Antennas
+- Controllers
+- ReaderControllerMap
+- SuspectBags
+- SystemSettings
+- ServerList
+- vwTags
+- vwDeviceLog
+
+Known Reader fields include:
+ID, ReaderCode, ReaderLocation, ReaderIP, ReaderPort, LastConnected,
+LastDisconnected, LastError, Status, ReaderHostName.
+
+Known Antenna fields include:
+ReaderID, AntennaPort, AntennaCode, AntennaLocation, PowerLevel,
+plus connection/disconnection/error/status information.
+
+Known LogicalDevice fields include:
+DeviceName, Status, DeviceType, IPAddress, LastConnected,
+LastDisconnected, LastError.
+
+AlarmList includes:
+TagID, TStamp, AlarmTime, AlarmDesc, AlarmType, LogicalDeviceID,
+ResponseError, isAlarm, isDelayed, Stage and cancellation/reporting fields.
+
+ReaderControllerMap connects readers to controllers.
+LogicalDeviceMap connects logical devices to readers.
+SuspectBags includes LastStage, LastSeenTime, LastSeenAt and journey fields.
+SystemSettings contains journey timing/threshold settings.
+
+Do not claim any field exists without verifying the actual uploaded/current SQL schema.
+
+TAGGING STATION TELEMETRY
+Requested monitoring includes:
+- application opened/closed
+- network disconnected/restored
+- PROFINET disconnected/restored
+- last restart/power-on
+- queue count when application closed
+- camera status where applicable
+- power ON/OFF if possible
+
+These are NOT established as authoritative BLTSMFT fields. Do not fake them.
+If the existing Tagging Station exposes reliable telemetry/logs, consider a small on-prem Windows Agent/Service after verification.
+
+POWER STATUS
+Power ON/OFF is useful for distinguishing a power problem from a network problem, but do not invent a PowerStatus field. Add only if an authoritative telemetry source exists.
+
+OVERALL DASHBOARD
+One Dashboard section with Summary | SLA toggle.
+
+Summary:
+- Bags Tagged Today
+- Processed at Reclaim Today
+- Processed at Exit Today
+- Processed at Recheck Today
+- Operational map
+- Recent Activity/System Events at bottom
+- Use History rather than an operational Action column
+
+SLA:
+- Active Bags Now
+- Oldest Active Bag
+- Bags Over SLA
+- Operational map
+- SLA table:
+  Bag ID | Tagged At | Last Stage | Last Seen | Dwell Time |
+  SLA Threshold | SLA Breach | Status | History
+- History opens in a right-side panel.
+
+Operational map is mandatory and prominent on Summary and SLA. Do not replace it with charts.
+
+EXCEPTION HANDLING
+Remove the Exception Dashboard from UI/navigation.
+Application exception logging is still required.
+
+Approved application-specific table:
+dbo.EnTrackBagExceptions
+- ExceptionID BIGINT IDENTITY PRIMARY KEY
+- OccurredAt DATETIME2(3)
+- CorrelationId VARCHAR(100)
+- HttpMethod VARCHAR(20)
+- RequestPath VARCHAR(1000)
+- QueryString VARCHAR(2000)
+- StatusCode INT
+- ExceptionType VARCHAR(500)
+- Message NVARCHAR(4000)
+- StackTrace NVARCHAR(MAX)
+- InnerException NVARCHAR(MAX)
+- UserName VARCHAR(256)
+- RemoteIp VARCHAR(64)
+- UserAgent VARCHAR(1000)
+- Source VARCHAR(100)
+- IsHandled BIT
+- AdditionalData NVARCHAR(MAX)
+
+Exception logging must never mask the original exception.
+Do not modify existing operational BLTSMFT tables for this logging.
+
+ON-PREMISES DEPLOYMENT
+Recommended:
+- Angular static files hosted by IIS
+- .NET 10 API hosted as Windows Service using Kestrel
+- IIS reverse proxy to API where appropriate
+- SignalR supported through IIS/reverse proxy
+- Existing BLTSMFT remains operational source of truth
+
+Deployment package should contain:
+Backend/EnTrackBag.Api/
+  - EnTrackBag.Api.csproj
+  - appsettings.json
+Frontend/entrackbag-ui/
+Database/
+Deployment/
+  - Install-EnTrackBag.ps1
+  - Uninstall-EnTrackBag.ps1
+  - production configuration template
+  - IIS/service configuration
+  - firewall requirements
+Documentation/
+  - Architecture
+  - On-Prem Deployment Guide
+  - Database Mapping
+  - Troubleshooting
+
+Do not recreate the BLTSMFT operational schema.
+
+.NET PROJECT
+The .csproj is required:
+Backend/EnTrackBag.Api/EnTrackBag.Api.csproj
+The .sln organizes .NET projects.
+Angular does not use .csproj; it uses package.json, angular.json and tsconfig files.
+
+REAL-TIME
+Use SignalR for real-time changes such as:
+- DeviceStatusChanged
+- ReaderStatusChanged
+- AntennaStatusChanged
+- ControllerStatusChanged
+- AlarmRaised
+- AlarmCleared
+- DashboardUpdated
+
+Do not generate fake status changes.
+
+TAG REPORT
+Previously agreed filters:
+- Tag ID
+- Prohibited toggle
+- Normal toggle
+- Suspect multi-select:
+  - Delay Proper Path
+  - Delay Improper Path
+  - Missed Luggage
+- From
+- To
+- Search
+- Clear
+Results use History, not operational Action.
+
+BAG JOURNEY CONFIGURATION
+Read-only unless write functionality is explicitly approved.
+Use actual SystemSettings values; never invent configuration.
+
+ADMINISTRATION / ROLES
+1. Ground Floor: Summary Dashboard only
+2. Supervisor: Summary Dashboard + SLA Dashboard
+3. Site Manager: everything except Administration
+4. Admin: everything including Administration
+
+Enforce roles in both Angular navigation/routing and .NET API authorization.
+
+VISUAL DESIGN
+Use the approved clean LIGHT dashboard style from the supplied requirements.
+Do not switch to dark/black theme.
+Do not add unnecessary charts.
+Do not add irrelevant fields.
+Use:
+- white/light cards
+- subtle borders/shadows
+- blue primary UI
+- green Online
+- orange Warning
+- red Offline
+- neutral/gray Idle
+- clear typography
+- compact operational tables
+- responsive layout
+
+CRITICAL DO-NOT-ASSUME RULES
+Never assume:
+- 8 reader ports = 8 physical antennas
+- every reader uses all eight ports
+- every Read Point has ATR
+- every Tagging Station has a Camera
+- every Tagging Station exposes PROFINET telemetry
+- every device has power telemetry
+- application lifecycle events are in BLTSMFT
+- queue count at shutdown exists in BLTSMFT
+- boot/restart time exists in BLTSMFT
+- Warning is a native database state
+- a field exists just because it appears in a mockup
+- screenshot counts are production data
+
+IMPLEMENTATION PRINCIPLE
+VERIFY FIRST
+  -> MAP TO EXISTING DATA
+  -> IMPLEMENT
+  -> SHOW ONLY SUPPORTED INFORMATION
+
+If a requirement is not supported by BLTSMFT or a verified existing component, identify the missing telemetry source instead of inventing a database field or fake value.
+
+ACCEPTANCE CRITERIA
+1. Angular 19
+2. .NET 10 Web API
+3. EF Core
+4. Existing BLTSMFT SQL Server integration
+5. No recreation of operational BLTSMFT schema
+6. No fabricated operational data
+7. No antenna columns for Tagging Station
+8. Reader antenna details based on actual configured records
+9. Antennas remain associated with one Reader through ReaderID
+10. No inferred physical antenna count
+11. Exit Gate supports Reader + Controller
+12. Read Points support RFID Readers and ATR where applicable
+13. Workstations include Recheck and Monitoring Station
+14. Device Details changes by Device Type
+15. Status definitions are visible
+16. Operational map remains on Summary and SLA
+17. Exception Dashboard removed
+18. Application exceptions logged separately
+19. On-prem deployment supported
+20. .csproj included
+21. Backend role authorization implemented
+22. SignalR real-time updates implemented
+23. Missing/unverified telemetry is not fabricated
+24. Final UI follows approved light dashboard style
+
+
+DDD / SOLUTION STRUCTURE — MANDATORY
+
+The EnTrackBag codebase must follow Domain-Driven Design (DDD) principles in its folder/project structure so future modifications, maintenance, testing, and feature additions remain easy.
+
+Recommended backend structure:
+
+Backend/
+├── EnTrackBag.Domain/
+│   ├── Entities/
+│   │   ├── Device/
+│   │   ├── Reader/
+│   │   ├── Antenna/
+│   │   ├── Controller/
+│   │   ├── Alarm/
+│   │   ├── Bag/
+│   │   └── ExceptionLog/
+│   ├── ValueObjects/
+│   ├── Enums/
+│   ├── Events/
+│   ├── Interfaces/
+│   └── Common/
+│
+├── EnTrackBag.Application/
+│   ├── Dashboard/
+│   │   ├── Queries/
+│   │   ├── DTOs/
+│   │   └── Services/
+│   ├── DeviceStatus/
+│   │   ├── Queries/
+│   │   ├── DTOs/
+│   │   └── Services/
+│   ├── TagReport/
+│   ├── BagJourney/
+│   ├── SLA/
+│   ├── ExceptionLogging/
+│   ├── Users/
+│   ├── Roles/
+│   └── Common/
+│
+├── EnTrackBag.Infrastructure/
+│   ├── Persistence/
+│   │   ├── BLTSMFT/
+│   │   │   ├── EnTrackBagDbContext.cs
+│   │   │   ├── Configurations/
+│   │   │   └── Queries/
+│   │   └── ExceptionLogging/
+│   ├── Repositories/
+│   ├── Services/
+│   ├── SignalR/
+│   └── DependencyInjection/
+│
+└── EnTrackBag.Api/
+    ├── Controllers/
+    ├── Hubs/
+    ├── Middleware/
+    ├── Filters/
+    ├── Extensions/
+    ├── Configuration/
+    └── Program.cs
+
+DDD dependency direction:
+
+    API / Presentation
+          ↓
+    Application
+          ↓
+       Domain
+
+    Infrastructure
+          ↓
+    implements Domain/Application interfaces
+
+The Domain project must NOT depend on EF Core, SQL Server, ASP.NET Core, SignalR, or infrastructure-specific implementations.
+
+The Application project contains use cases, orchestration, DTOs, validation, and application-level interfaces. It should not contain database-specific implementation details.
+
+Infrastructure contains EF Core mappings, BLTSMFT persistence, repositories, external/device integrations, and concrete implementations of interfaces.
+
+The API layer contains HTTP endpoints, authentication/authorization configuration, SignalR hubs, middleware, and presentation concerns.
+
+IMPORTANT:
+- Do not create an artificial repository abstraction for every table unless it provides real domain/application value.
+- Keep BLTSMFT schema mapping in Infrastructure.
+- Do not move database-specific column knowledge into Domain entities unnecessarily.
+- Keep business rules in Domain/Application rather than Controllers.
+- Organize by business capability/feature where practical so changes to Device Status, SLA, Tag Report, or Bag Journey remain isolated.
+- Preserve clear separation between read/query models and domain behavior where appropriate.
+- The structure must make it possible to modify one feature without creating a chain of unrelated changes throughout the application.
+
+ANGULAR DDD / FEATURE-BASED STRUCTURE
+
+The Angular application should also avoid a single large components/services folder.
+
+Recommended structure:
+
+Frontend/entrackbag-ui/
+├── src/app/
+│   ├── core/
+│   │   ├── auth/
+│   │   ├── guards/
+│   │   ├── interceptors/
+│   │   ├── services/
+│   │   ├── signalr/
+│   │   └── layout/
+│   │
+│   ├── shared/
+│   │   ├── components/
+│   │   ├── directives/
+│   │   ├── pipes/
+│   │   └── models/
+│   │
+│   └── features/
+│       ├── dashboard/
+│       │   ├── summary/
+│       │   └── sla/
+│       ├── device-status/
+│       ├── tag-report/
+│       ├── bag-journey/
+│       └── administration/
+│           ├── users/
+│           └── roles/
+
+Feature-specific API services, models, components, state, and UI logic should stay within their feature when practical.
+
+Core contains cross-cutting application infrastructure.
+Shared contains reusable UI building blocks that have no business ownership.
+Features contain business/application functionality.
+
+DDD STRUCTURE ACCEPTANCE CRITERIA
+
+- Domain is independent of infrastructure frameworks.
+- Application use cases are separated from HTTP controllers.
+- EF Core and BLTSMFT schema details stay in Infrastructure.
+- Device Status changes should primarily affect DeviceStatus feature/application/domain/infrastructure areas, not unrelated modules.
+- SLA changes should be isolated from Tag Report where possible.
+- Angular features are separated by business capability.
+- Shared components are genuinely reusable rather than a dumping ground.
+- Folder/project names reflect business concepts and agreed terminology.
+- The structure must make future modifications easier and reduce coupling.
+
+
+SHARED AUTHENTICATION / AUTHORIZATION — MANDATORY ARCHITECTURE
+
+EnTrackBag will use a Hub Architecture with SignalR/WebSockets for real-time communication.
+
+Authentication and authorization must therefore protect BOTH:
+- normal HTTP/REST API endpoints
+- SignalR hubs / WebSocket connections
+
+Do not implement separate login/authentication logic for SignalR.
+
+Use a shared, reusable TrackIT Identity / Authentication Service that can later be consumed by other TrackIT applications.
+
+Recommended architecture:
+
+    TrackIT Identity Service
+        |
+        | JWT / OIDC Access Token
+        |
+        +--------------------------+
+        |                          |
+        v                          v
+    EnTrackBag REST API       EnTrackBag SignalR Hub
+        |                          |
+        +-------------+------------+
+                      |
+                      v
+              EnTrackBag Application
+                      |
+                      v
+                  BLTSMFT
+
+The shared Identity service should be application-independent and should not be named specifically for EnTrackBag if it is intended for future applications.
+
+Recommended solution name:
+
+    TrackIT.Identity
+
+Possible structure:
+
+    TrackIT.Identity/
+    ├── TrackIT.Identity.Domain/
+    │   ├── Entities/
+    │   │   ├── User/
+    │   │   ├── Role/
+    │   │   ├── Permission/
+    │   │   └── Application/
+    │   ├── ValueObjects/
+    │   ├── Enums/
+    │   ├── Interfaces/
+    │   └── Common/
+    │
+    ├── TrackIT.Identity.Application/
+    │   ├── Authentication/
+    │   ├── Users/
+    │   ├── Roles/
+    │   ├── Permissions/
+    │   ├── Applications/
+    │   └── Common/
+    │
+    ├── TrackIT.Identity.Infrastructure/
+    │   ├── Persistence/
+    │   ├── Identity/
+    │   ├── Token/
+    │   ├── Repositories/
+    │   └── DependencyInjection/
+    │
+    └── TrackIT.Identity.Api/
+        ├── Controllers/
+        ├── Middleware/
+        ├── Configuration/
+        └── Program.cs
+
+Identity database:
+- The Identity service may have its own database.
+- Do NOT put authentication/authorization tables into BLTSMFT.
+- BLTSMFT remains the baggage/operational source of truth.
+- Identity data must remain separated from operational baggage data.
+
+AUTHENTICATION
+
+Authentication answers:
+
+    "Who is the user?"
+
+Typical flow:
+
+    Browser
+       |
+       v
+    TrackIT Identity
+       |
+       v
+    Access Token / JWT
+       |
+       +----------------------+
+       |                      |
+       v                      v
+    REST API             SignalR Hub
+    Bearer token         authenticated connection
+
+The Angular application should authenticate once and use the resulting access token for API calls and the SignalR connection.
+
+Do not create a separate SignalR login.
+
+AUTHORIZATION
+
+Authorization answers:
+
+    "What is this user allowed to do?"
+
+Use roles AND permissions.
+
+Do not hard-code business authorization throughout controllers or Angular components.
+
+Recommended permissions include:
+
+    Dashboard.View
+    Dashboard.SLA.View
+
+    DeviceStatus.View
+    DeviceStatus.Details
+
+    TagReport.View
+    BagJourney.View
+
+    Administration.View
+    Users.Manage
+    Roles.Manage
+
+Roles should be collections of permissions.
+
+Current EnTrackBag role requirements:
+
+1. Ground Floor
+   - Summary only
+
+2. Supervisor
+   - Summary + SLA
+
+3. Site Manager
+   - Everything except Administration
+
+4. Admin
+   - Everything including Administration
+
+Enforce authorization on the backend.
+Angular route/navigation restrictions are for user experience only and must NOT be the only security layer.
+
+SIGNALR / HUB ARCHITECTURE
+
+Use a protected SignalR monitoring hub, for example:
+
+    /hubs/monitoring
+
+Suggested backend structure:
+
+    EnTrackBag.Api/
+    ├── Controllers/
+    │   ├── DashboardController
+    │   ├── DeviceStatusController
+    │   ├── TagReportController
+    │   └── BagJourneyController
+    │
+    └── Hubs/
+        └── MonitoringHub
+
+Protect the hub with authentication and appropriate authorization policies.
+
+Conceptually:
+
+    [Authorize]
+    MonitoringHub
+
+Use permission/policy-based authorization where practical, for example:
+
+    DeviceStatus.View
+
+The Hub must never allow an authenticated client to bypass API/business authorization and retrieve information that the user is not permitted to access.
+
+SIGNALR EVENTS
+
+Potential events include:
+
+    DeviceStatusChanged
+    ReaderStatusChanged
+    AntennaStatusChanged
+    ControllerStatusChanged
+
+    AlarmRaised
+    AlarmCleared
+
+    DashboardUpdated
+    SystemEventCreated
+
+Only publish real events/state changes from verified data sources.
+
+Do not generate fake status changes merely to make the dashboard appear real-time.
+
+TOKEN HANDLING
+
+The architecture must support JWT/OIDC-style bearer authentication.
+
+The API validates the access token.
+
+The SignalR connection is authenticated using the same user access token.
+
+The user's identity, roles, and permissions should be available to the application authorization layer.
+
+Do not require the EnTrackBag API to call the Identity service for every request merely to ask whether a token is valid.
+
+Prefer normal token validation locally in the API/hub, while the Identity service remains the authority that issues tokens.
+
+APPLICATION ISOLATION
+
+The shared Identity service must remain independent from EnTrackBag's baggage domain.
+
+Do NOT put:
+
+- User entities
+- Role entities
+- Permission entities
+- authentication logic
+
+inside:
+
+    EnTrackBag.Domain
+
+unless there is a specific integration contract/value needed by the application.
+
+EnTrackBag should consume the authenticated identity/claims and apply application-specific authorization policies.
+
+MULTI-APPLICATION FUTURE
+
+The shared Identity architecture must be designed so future TrackIT applications can reuse it:
+
+    TrackIT Identity
+         |
+         +---- EnTrackBag
+         |
+         +---- Future Project B
+         |
+         +---- Future Project C
+
+Applications may have different permissions, but the authentication platform is shared.
+
+This is a platform capability, not an EnTrackBag business domain.
+
+DDD DEPENDENCY RULE WITH IDENTITY
+
+For TrackIT.Identity:
+
+    API
+      ↓
+    Application
+      ↓
+    Domain
+
+    Infrastructure
+      ↓
+    implements interfaces required by Domain/Application
+
+For EnTrackBag:
+
+    API
+      ↓
+    Application
+      ↓
+    Domain
+
+    Infrastructure
+      ↓
+    implements interfaces
+
+Identity integration must not cause the EnTrackBag Domain to depend on infrastructure, EF Core, ASP.NET Core, SignalR, SQL Server, or the Identity implementation.
+
+SECURITY ACCEPTANCE CRITERIA
+
+- Authentication is centralized in TrackIT.Identity.
+- Authorization is reusable across TrackIT applications.
+- JWT/OIDC access tokens protect REST APIs.
+- The same authenticated token/user context protects SignalR/WebSocket connections.
+- SignalR hubs require authentication.
+- Hub operations are authorization-aware.
+- Angular cannot bypass backend authorization.
+- EnTrackBag does not store authentication credentials in BLTSMFT.
+- Identity data is stored separately from BLTSMFT.
+- No separate SignalR login is implemented.
+- Identity is not tightly coupled to the EnTrackBag domain.
+- Future TrackIT applications can reuse the Identity service.
+- No fake authentication, users, roles, permissions, or tokens are added as production data.
+
+UPDATED OVERALL ARCHITECTURE
+
+    ┌───────────────────────────────────────────────┐
+    │              TrackIT Identity                 │
+    │                                               │
+    │ Users | Roles | Permissions | Applications    │
+    │ Authentication | Token Issuance               │
+    └───────────────────────┬───────────────────────┘
+                            │
+                     JWT / OIDC Token
+                            │
+              ┌─────────────┴─────────────┐
+              │                           │
+              v                           v
+       ┌───────────────┐          ┌───────────────┐
+       │ EnTrackBag    │          │ SignalR Hub   │
+       │ REST API      │          │ WebSocket     │
+       └───────┬───────┘          └───────┬───────┘
+               │                          │
+               └──────────┬───────────────┘
+                          v
+                 EnTrackBag Application
+                          |
+                          v
+                     BLTSMFT SQL
+                          |
+                          v
+                 Existing EnTrackBag
+                    Components
+
+The architecture must keep:
+- authentication centralized
+- authorization reusable
+- business/domain logic isolated
+- BLTSMFT untouched as the operational source of truth
+- SignalR secured with the same identity context as REST APIs
+- DDD structure clean and maintainable
+
+
+ACCESS TYPES — PERMISSION + ACCESS TYPE
+- Add an AccessTypes reference table.
+- AccessTypes values: VIEW, CREATE, EDIT, DELETE, EXPORT.
+- Permissions represent a page/function.
+- RolePermissions must contain RoleId, PermissionId, and AccessTypeId.
+- JWT permission access claims use the format PermissionCode:AccessType, for example TagReport.View:VIEW.
+- Angular navigation and route guards and .NET API authorization must enforce the same permission/access combination.
+- Role matrix: Ground Floor = Summary Dashboard VIEW only; Supervisor = Summary + SLA VIEW; Site Manager = all operational pages VIEW except Administration; Admin = all pages including Administration, with Users VIEW/CREATE/EDIT/DELETE and Roles VIEW/EDIT.
+
+
+PERMISSION + ACCESS TYPE MODEL
+- User types: Ground Floor, Supervisor, Site Manager, Admin.
+- Ground Floor: Summary Dashboard VIEW only.
+- Supervisor: Summary Dashboard VIEW + SLA Dashboard VIEW.
+- Site Manager: all operational pages VIEW except Administration.
+- Admin: all pages VIEW including Administration; Users VIEW/CREATE/EDIT/DELETE; Roles VIEW/EDIT; Sessions and Audit Log VIEW.
+- Add `AccessTypes` reference table with VIEW, CREATE, EDIT, DELETE, EXPORT.
+- `Permissions` identify the page/function.
+- `RolePermissions` uses `(RoleId, PermissionId, AccessTypeId)`.
+- JWT carries permission access claims such as `TagReport.View:VIEW`.
+- Angular navigation/guards and .NET API authorization enforce the same permission/access combination.
