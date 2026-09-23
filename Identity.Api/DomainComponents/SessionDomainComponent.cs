@@ -1,5 +1,6 @@
 using Identity.Api.Data.Repositories;
 using Identity.Api.DTOs;
+using Identity.Api.Security;
 
 namespace Identity.Api.DomainComponents;
 
@@ -26,7 +27,7 @@ public sealed class SessionDomainComponent : ISessionDomainComponent
                 x.User.DisplayName ?? x.User.UserName,
                 DateTime.SpecifyKind(x.LoginAt, DateTimeKind.Utc),
                 x.LogoutAt.HasValue ? DateTime.SpecifyKind(x.LogoutAt.Value, DateTimeKind.Utc) : null,
-                x.RemoteIp,
+                ClientIpAddress.Normalize(x.RemoteIp),
                 x.UserAgent,
                 x.TokenExpiresAt.HasValue ? DateTime.SpecifyKind(x.TokenExpiresAt.Value, DateTimeKind.Utc) : null,
                 IsLive(x, now),

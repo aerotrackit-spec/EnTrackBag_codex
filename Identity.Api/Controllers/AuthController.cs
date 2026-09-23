@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using EnTrackBag.Sessions;
+using Identity.Api.Security;
 namespace Identity.Api.Controllers;
 
 [ApiController]
@@ -21,7 +22,9 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login(LoginRequestDto request, CancellationToken ct)
     {
         var ua = Request.Headers["User-Agent"].ToString();
-        var result = await _identityDomainComponent.LoginAsync(request, HttpContext.Connection.RemoteIpAddress?.ToString(), ua, null, ct);
+        // Use the connection address, not an untrusted client-supplied forwarding header.
+        var ip = ClientIpAddress.Normalize(HttpContext.Connection.RemoteIpAddress?.ToString());
+        var result = await _identityDomainComponent.LoginAsync(request, ip, ua, null, ct);
         return result is null ? Unauthorized() : Ok(result);
     }
 
