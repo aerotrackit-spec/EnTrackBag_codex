@@ -18,7 +18,7 @@ public sealed class RoleDomainComponent : IRoleDomainComponent
     {
         var result = new List<RoleListItemDto>();
         foreach (var role in await _administrationRepository.GetRolesAsync(ct))
-            result.Add(MapRole(role, await _administrationRepository.RoleHasSystemAccountAsync(role.Id, ct)));
+            result.Add(MapRole(role, SystemAccount.IsAdminRole(role.Name)));
         return result.ToArray();
     }
 
@@ -41,8 +41,8 @@ public sealed class RoleDomainComponent : IRoleDomainComponent
     {
         var role = await _administrationRepository.GetRoleAsync(roleId, ct);
         if (role is null) return null;
-        if (await _administrationRepository.RoleHasSystemAccountAsync(roleId, ct))
-            throw new ProtectedAccountException("Permissions of a role assigned to the system Administrator cannot be changed.");
+        if (SystemAccount.IsAdminRole(role.Name))
+            throw new ProtectedAccountException("Permissions of the Admin role cannot be changed.");
 
         var permissions = await _administrationRepository.GetPermissionsAsync(ct);
         var accessTypes = await _administrationRepository.GetAccessTypesAsync(ct);

@@ -20,19 +20,23 @@ Role matrix:
 - Ground Floor: Summary Dashboard VIEW only.
 - Supervisor: Summary Dashboard VIEW + SLA Dashboard VIEW.
 - Site Manager: all operational pages VIEW except Administration.
-- Admin: all pages VIEW including Administration; Users VIEW/CREATE/EDIT/DELETE; Roles VIEW/EDIT; Sessions and Audit Log VIEW.
+- Admin: all existing active permissions and access types.
 
 After installation, scaffold the tables with EF Core Database-First and verify the generated types against the live database. No migrations, `EnsureCreated()`, or `Database.Migrate()` are used.
 
 ## Single development deployment entry point
 
-Use `Install-EnTrackBag-New-Tables-And-Admin.sql` for development deployment over an existing BLTSMFT database. Older install/patch files are historical, not additional deployment steps.
+Use only `Install-EnTrackBag-New-Tables-And-Admin.sql` for development deployment over an existing BLTSMFT database. The six superseded install/patch SQL files have been consolidated into this file and removed; their originals remain available in Git history. The legacy master **MFT Script Latest** is not changed, replaced or included.
+
+The consolidated script includes employee-profile columns/indexes, legacy permission-code normalization (with exact `Dashboard.SLA.View`), Admin grants and session lifecycle reconciliation. It preserves session rows, expires stale active sessions, revokes duplicate active sessions and creates the one-active-session-per-user index. Stop the API before manual deployment to avoid concurrent logins during this maintenance.
+
+The script is rerunnable, but uses multiple committed phases rather than one all-or-nothing transaction. In SSMS, select **Query → SQLCMD Mode** before executing: the script's `:ON ERROR EXIT` directive stops subsequent batches after an error. If a phase fails, resolve the reported problem and rerun from the beginning. Back up first. Existing duplicate profile values or conflicting legacy/canonical permission codes are not silently merged or deleted.
 
 For a new database's first system account, run `New-DevelopmentPasswordHash.ps1` with PowerShell 7, enter a new password at its masked prompt, and paste only the emitted PBKDF2-HMAC-SHA512 hash into `@InitialPasswordHash` in the SQL script. No default/reversible password is shipped. A rerun does not require a new hash when admin already exists and never overwrites its password.
 
 The script creates exactly the nine listed application-owned tables using existence checks, reconciles previously deployed identity columns, and seeds one username `admin` / display name `Administrator`. It captures the inserted ID with SCOPE_IDENTITY or selects the existing ID and seeds relationships without duplicates. Existing non-system users and operational data are preserved. Admin receives all existing active permissions/access types; Site Manager includes Bag Journey Configuration VIEW.
 
-The application treats only username `admin` (case-insensitive) as the protected system account. It permits viewing and password changes, rejects profile/role/deactivation/deletion edits, and rejects changes to permissions of its assigned roles. Other users are not protected merely because they have an Admin role or the display name Administrator. Security audit/session history is retained; no ordinary per-user History action is exposed for the protected account.
+The application protects every user assigned the Admin role, regardless of username or display name. Viewing and password changes remain allowed; profile/role/deactivation/deletion edits are rejected. The Admin role permission matrix is read-only. Protection uses the existing UserRoles/Role relationships and needs no schema change or account rename. Security audit/session history is retained.
 
 Passwords use PBKDF2-HMAC-SHA512 with a random 16-byte salt, 210000 iterations and a 32-byte subkey, encoded in the ASP.NET Identity V3 format. Existing SHA512 Identity hashes verify and upgrade when appropriate. Plaintext, AES and legacy SHA256 password verification are removed; incompatible old accounts require an authorized password reset. Passport encryption is independent and unchanged.
 

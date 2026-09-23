@@ -1,3 +1,4 @@
+:ON ERROR EXIT
 /*
     EnTrackBag manual installation for an EXISTING BLTSMFT database
     ----------------------------------------------------------------
@@ -9,10 +10,14 @@
     truncated, deleted or modified by this script.
 
     DEVELOPMENT DEPLOYMENT: the single maintained installation entry point.
+    Consolidates the former install, employee-profile, permission/access-type,
+    SLA-code, Admin-grant and session-lifecycle scripts. Do not run old patches.
+    The legacy master file "MFT Script Latest" must remain unchanged.
     For a new system account, generate an Identity V3 PBKDF2-HMAC-SHA512 hash
     with New-DevelopmentPasswordHash.ps1 and set @InitialPasswordHash below.
     No plaintext or reversible password is embedded. Existing users are never reseeded.
-    Back up BLTSMFT before applying. Run this file in SSMS.
+    Back up BLTSMFT before applying. Stop the API and run in SSMS SQLCMD Mode.
+    :ON ERROR EXIT prevents later GO batches from running after a failed phase.
 */
 
 USE [BLTSMFT];
@@ -235,14 +240,31 @@ GO
 IF COL_LENGTH('dbo.UserSessions','LastActivityAt') IS NULL
     ALTER TABLE dbo.UserSessions ADD LastActivityAt DATETIME2 NULL;
 GO
-UPDATE dbo.UserSessions SET LastActivityAt=LoginAt WHERE LastActivityAt IS NULL;
-ALTER TABLE dbo.UserSessions ALTER COLUMN LastActivityAt DATETIME2 NOT NULL;
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.UserSessions') AND name='UX_UserSessions_OneActivePerUser')
-BEGIN
-    IF EXISTS (SELECT UserId FROM dbo.UserSessions WHERE IsActive=1 GROUP BY UserId HAVING COUNT(*)>1)
-        THROW 51004, 'Resolve duplicate active sessions before installing the unique session index; history must be preserved.', 1;
-    CREATE UNIQUE INDEX UX_UserSessions_OneActivePerUser ON dbo.UserSessions(UserId) WHERE IsActive=1;
-END;
+BEGIN TRY
+    BEGIN TRANSACTION;
+    DECLARE @SessionNow DATETIME2 = SYSUTCDATETIME();
+    UPDATE dbo.UserSessions SET LastActivityAt=LoginAt WHERE LastActivityAt IS NULL;
+    -- Keep every historical row; close stale sessions before enforcing uniqueness.
+    UPDATE dbo.UserSessions
+    SET IsActive=0, LogoutAt=COALESCE(LogoutAt,@SessionNow),
+        LogoutReason=CASE WHEN LogoutAt IS NOT NULL
+            THEN COALESCE(LogoutReason,'Logged out') ELSE 'Expired' END
+    WHERE IsActive=1 AND (LogoutAt IS NOT NULL OR TokenExpiresAt IS NULL
+        OR TokenExpiresAt<=@SessionNow OR LastActivityAt<=DATEADD(minute,-5,@SessionNow));
+    ;WITH duplicates AS (
+        SELECT *, ROW_NUMBER() OVER(PARTITION BY UserId ORDER BY LoginAt DESC,SessionId DESC) AS rn
+        FROM dbo.UserSessions WHERE IsActive=1
+    )
+    UPDATE duplicates SET IsActive=0, LogoutAt=@SessionNow, LogoutReason='Revoked' WHERE rn>1;
+    ALTER TABLE dbo.UserSessions ALTER COLUMN LastActivityAt DATETIME2 NOT NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.UserSessions') AND name='UX_UserSessions_OneActivePerUser')
+        CREATE UNIQUE INDEX UX_UserSessions_OneActivePerUser ON dbo.UserSessions(UserId) WHERE IsActive=1;
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE()<>0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
 GO
 
 /* Indexes are created only when missing. */
@@ -282,13 +304,19 @@ BEGIN TRY
         @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000;
     IF @LockResult < 0 THROW 51005, 'Cannot acquire the identity seed lock.', 1;
 
-    -- Rename the earlier permission in place, preserving existing grants.
-    IF EXISTS (SELECT 1 FROM dbo.Permissions WHERE Code='Dashboard.SLA')
-    BEGIN
-        IF EXISTS (SELECT 1 FROM dbo.Permissions WHERE Code='Dashboard.SLA.View')
-            THROW 51006, 'Both SLA permission codes exist. Review their grants before deploying.', 1;
-        UPDATE dbo.Permissions SET Code='Dashboard.SLA.View' WHERE Code='Dashboard.SLA';
-    END;
+    -- Rename legacy permissions in place, preserving IDs and all existing grants.
+    -- SLA intentionally retains its exact canonical code Dashboard.SLA.View.
+    DECLARE @Codes TABLE (OldCode VARCHAR(150), NewCode VARCHAR(150));
+    INSERT @Codes VALUES
+        ('Dashboard.View','Dashboard'),('Dashboard.SLA','Dashboard.SLA.View'),
+        ('DeviceStatus.View','DeviceStatus'),('TagReport.View','TagReport'),
+        ('BagJourney.View','BagJourney'),('Administration.View','Administration'),
+        ('Users.Manage','Users'),('Roles.Manage','Roles'),
+        ('Sessions.Manage','Sessions'),('AuditLog.View','AuditLog');
+    IF EXISTS (SELECT 1 FROM @Codes m JOIN dbo.Permissions p ON p.Code=m.OldCode
+        JOIN dbo.Permissions n ON n.Code=m.NewCode)
+        THROW 51006, 'Both legacy and canonical permission codes exist. Review grants before deploying.', 1;
+    UPDATE p SET Code=m.NewCode FROM dbo.Permissions p JOIN @Codes m ON p.Code=m.OldCode;
 
     INSERT dbo.AccessTypes(Code,Name,Description)
     SELECT v.Code,v.Name,v.Description FROM (VALUES

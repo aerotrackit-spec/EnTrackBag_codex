@@ -1,10 +1,10 @@
-Run `Refactor-Permission-AccessTypes.sql` against the existing BLTSMFT database before starting the updated APIs. It renames existing permission rows in place, preserves their IDs and grants, and adds BagJourney.Configuration with VIEW/EDIT for Admin. It is safe to run repeatedly. A conflicting old/new code pair stops the transaction for review rather than discarding an ID.
+Use only `Install-EnTrackBag-New-Tables-And-Admin.sql` following `README.md`. It includes permission normalization, preserves IDs and grants, and retains the exact SLA code `Dashboard.SLA.View`. Conflicting old/new codes stop deployment for review.
 
-The fresh-install scripts now seed feature codes. For an existing installation, run the refactoring script first; do not rerun the original full installer.
+The single consolidated script supports fresh identity installation and existing identity upgrades. No separate refactoring script is needed.
 
 Sign out and sign in after deployment to refresh permission claims in the token and browser storage. Previously issued tokens contain the old codes and will no longer authorize renamed features.
 
-Validation: the script includes duplicate-code and duplicate-grant queries, which should return no rows. Permission IDs 1–11 remain unchanged. No operational MFT tables are changed, and neither API performs schema creation or automatic migration.
+The consolidated script has not been executed or database-tested during consolidation. Existing permission IDs are preserved; seed IDs are not hardcoded. No operational MFT tables are changed. Verification below is historical, not verification of this consolidated version.
 
 Local verification (2026-09-16): .NET Release build and Angular build passed. The migration was run twice inside a rolled-back transaction, then applied successfully. Admin login, users, roles and configuration GET returned HTTP 200; unauthenticated configuration access returned 401; VIEW-only and unrelated grants were rejected with 403 for configuration PUT. The UI responded on port 4200.
 

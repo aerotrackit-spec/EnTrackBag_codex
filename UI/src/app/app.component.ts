@@ -20,6 +20,7 @@ import { PageHeaderService, PageHeaderState } from "./core/page-header.service";
   styleUrl: "./app.component.scss",
 })
 export class AppComponent implements OnInit, OnDestroy {
+  readonly currentYear = new Date().getFullYear();
   accountMenuOpen = false;
   pageHeader: PageHeaderState = { title: "" };
   private navSub?: Subscription;

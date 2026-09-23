@@ -19,11 +19,13 @@ public class DashboardController : ControllerBase
 
     [HttpGet("kpis")]
     [Authorize(Policy = "Dashboard")]
-    public async Task<IActionResult> GetKpis(CancellationToken ct) => Ok(await _dashboardDomainComponent.GetKpisAsync(ct));
+    public async Task<IActionResult> GetKpis(CancellationToken ct)
+        => Ok(await _dashboardDomainComponent.GetKpisAsync(ct));
 
     [HttpGet("sla")]
     [Authorize(Policy = EnTrackBag.Authorization.PermissionCodes.DashboardSla)]
-    public async Task<IActionResult> GetSla(CancellationToken ct) => Ok(await _slaDomainComponent.GetSlaAsync(ct));
+    public async Task<IActionResult> GetSla(CancellationToken ct)
+        => Ok(await _slaDomainComponent.GetSlaAsync(ct));
 
     [HttpGet("bags/{bagId}/history")]
     [Authorize(Policy = "BagHistory")]

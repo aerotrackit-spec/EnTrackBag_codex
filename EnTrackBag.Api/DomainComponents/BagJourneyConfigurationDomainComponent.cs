@@ -20,7 +20,10 @@ public sealed class BagJourneyConfigurationDomainComponent : IBagJourneyConfigur
     private static readonly string[] SettingNames = Definitions
         .SelectMany(x => new[] { x.NormalSetting, x.DelaySetting }).Append("CurrentPrimaryIP").Distinct().ToArray();
     private readonly IBagJourneyConfigurationRepository _repository;
-    public BagJourneyConfigurationDomainComponent(IBagJourneyConfigurationRepository repository) { _repository = repository; }
+    public BagJourneyConfigurationDomainComponent(IBagJourneyConfigurationRepository repository)
+    {
+        _repository = repository;
+    }
 
     public async Task<BagJourneyConfigurationDto> GetAsync(CancellationToken ct) =>
         Map(await _repository.GetSettingsAsync(SettingNames, false, ct));
@@ -37,11 +40,14 @@ public sealed class BagJourneyConfigurationDomainComponent : IBagJourneyConfigur
         var byName = settings.Where(x => x.SettingName != null).ToDictionary(x => x.SettingName!, StringComparer.OrdinalIgnoreCase);
         foreach (var definition in Definitions)
         {
-            if (!requested.TryGetValue(definition.Code, out var update)) continue;
+            if (!requested.TryGetValue(definition.Code, out var update))
+                continue;
             if (!byName.TryGetValue(definition.NormalSetting, out var normal) || !byName.TryGetValue(definition.DelaySetting, out var delay))
                 throw new InvalidOperationException($"Required MFT settings for {definition.From} to {definition.To} are missing.");
-            normal.SettingValue = update.NormalSeconds.ToString(); normal.LastChanged = DateTime.Now;
-            delay.SettingValue = update.DelaySeconds.ToString(); delay.LastChanged = DateTime.Now;
+            normal.SettingValue = update.NormalSeconds.ToString();
+            normal.LastChanged = DateTime.Now;
+            delay.SettingValue = update.DelaySeconds.ToString();
+            delay.LastChanged = DateTime.Now;
         }
         await _repository.SaveChangesAsync(ct);
         return Map(settings);
@@ -49,9 +55,14 @@ public sealed class BagJourneyConfigurationDomainComponent : IBagJourneyConfigur
 
     private static BagJourneyConfigurationDto Map(SystemSettingEntity[] settings)
     {
-        var byName = settings.Where(x => x.SettingName != null).ToDictionary(x => x.SettingName!, StringComparer.OrdinalIgnoreCase);
+        var byName = settings.Where(x => x.SettingName != null)
+            .ToDictionary(x => x.SettingName!, StringComparer.OrdinalIgnoreCase);
+
         int Value(string name) => byName.TryGetValue(name, out var item) && int.TryParse(item.SettingValue, out var value) ? value : 0;
-        var thresholds = Definitions.Select(x => new BagJourneyThresholdDto(x.Code, x.From, x.To, Value(x.NormalSetting), Value(x.DelaySetting))).ToArray();
+
+        var thresholds = Definitions.Select(x => new BagJourneyThresholdDto(x.Code, x.From, x.To, Value(x.NormalSetting), Value(x.DelaySetting)))
+            .ToArray();
+
         byName.TryGetValue("CurrentPrimaryIP", out var primary);
         return new BagJourneyConfigurationDto(primary?.SettingValue, primary?.LastChanged, thresholds);
     }
