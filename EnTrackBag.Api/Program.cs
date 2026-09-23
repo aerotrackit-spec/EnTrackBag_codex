@@ -16,6 +16,8 @@ builder.Host.UseWindowsService();
 builder.Services.AddDbContext<BltsmftDbContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("BLTSMFT")));
 
 builder.Services.AddScoped<IReaderRepository, ReaderRepository>();
+builder.Services.AddScoped<ITagReportRepository, TagReportRepository>();
+builder.Services.AddScoped<ITagReportDomainComponent, TagReportDomainComponent>();
 builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
 builder.Services.AddScoped<ISlaRepository, SlaRepository>();
 builder.Services.AddScoped<IBagJourneyConfigurationRepository, BagJourneyConfigurationRepository>();

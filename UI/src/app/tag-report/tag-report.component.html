@@ -1,43 +1,66 @@
 <section class="tag-report-page" aria-label="Tag report">
-  <div class="report-toolbar">
-    <span>Search tagged bags by bag type, alarm type and date range.</span>
-  </div>
-  <p class="integration-note" role="status">Report data connection pending. Filters are available below; search, history and export require the report API.</p>
-  <div class="report-layout" [class.history-closed]="!historyOpen">
+  <div class="report-layout">
     <div class="report-main">
       <section class="panel filter-panel">
         <h2><span aria-hidden="true">⊡</span> Search &amp; Filter</h2>
         <form #filters="ngForm" (ngSubmit)="search(filters)">
           <div class="filter-grid">
-            <label class="tag-field">Tag ID<div class="search-input"><input name="tagId" [(ngModel)]="tagId" placeholder="Enter Tag ID" maxlength="128"><span aria-hidden="true">⌕</span></div></label>
+            <label class="tag-field">Tag ID<div class="search-input"><input name="tagId" [(ngModel)]="tagId" placeholder="Enter exact Tag ID" maxlength="50"><span aria-hidden="true">⌕</span></div></label>
             <fieldset class="bag-types"><legend>Bag Type</legend><div class="switches">
               <label class="switch-label"><input type="checkbox" name="prohibited" [(ngModel)]="prohibited"><span class="switch-track" aria-hidden="true"></span>Prohibited Bag</label>
               <label class="switch-label"><input type="checkbox" name="normal" [(ngModel)]="normal"><span class="switch-track" aria-hidden="true"></span>Normal Bag</label>
-            </div>
-            <div class="alarm-field"><span>Suspect Bag (Alarm Type)</span><details class="alarm-picker"><summary>{{ selectedCount }} selected <span aria-hidden="true">⌄</span></summary>
+            </div></fieldset>
+            <div class="alarm-field"><span>Suspect Bag</span><details class="alarm-picker"><summary>{{ selectedCount }} selected <span aria-hidden="true">⌄</span></summary>
               <div class="alarm-options"><label class="select-all"><input type="checkbox" [checked]="selectedCount === alarms.length" [indeterminate]="selectedCount > 0 && selectedCount < alarms.length" (change)="selectAll($any($event.target).checked)">Select All</label>
                 <label *ngFor="let alarm of alarms"><input type="checkbox" [(ngModel)]="alarm.selected" [ngModelOptions]="{standalone: true}">{{ alarm.name }}</label>
               </div>
-            </details></div></fieldset>
+            </details></div>
+            <label class="period-from">Period From<input type="datetime-local" name="from" [(ngModel)]="from" #fromInput="ngModel" required [max]="to"></label>
+            <label class="period-to">Period To<input type="datetime-local" name="to" [(ngModel)]="to" #toInput="ngModel" required [min]="from"></label>
+            <div class="form-actions"><button type="button" class="secondary" (click)="clear(filters)">Clear</button><button type="submit" class="primary" [disabled]="loading || filters.invalid || invalidPeriod || !hasBagType">{{ loading ? 'Searching…' : 'Search' }}</button></div>
           </div>
-          <div class="period-actions"><fieldset class="period"><legend>Period</legend><div class="period-inputs">
-            <label>From<input type="datetime-local" name="from" [(ngModel)]="from" #fromInput="ngModel" required [max]="to"></label><span aria-hidden="true">–</span><label>To<input type="datetime-local" name="to" [(ngModel)]="to" #toInput="ngModel" required [min]="from"></label>
-          </div></fieldset><div class="form-actions"><button type="button" class="secondary" (click)="clear(filters)">↻ &nbsp; Clear</button><button type="submit" class="primary" [disabled]="filters.invalid || invalidPeriod || !hasBagType">⌕ &nbsp; Search</button></div></div>
           <p class="validation" *ngIf="(fromInput.touched || toInput.touched || submitted) && (!from || !to || invalidPeriod)">Enter a valid period with From no later than To.</p>
           <p class="validation" *ngIf="!hasBagType">Select a bag type or a suspect alarm type.</p>
           <p class="search-message" *ngIf="message" role="status">{{ message }}</p>
         </form>
       </section>
       <section class="panel results-panel">
-        <div class="panel-heading"><h2><span aria-hidden="true">▤</span> Tag Report Results (—)</h2><div class="result-actions"><button *ngIf="!historyOpen" type="button" class="secondary" (click)="historyOpen = true">Tag History</button><button type="button" class="secondary" disabled title="Available when report results are loaded">↓ &nbsp; Export</button></div></div>
-        <div class="table-scroll" tabindex="0" aria-label="Tag report results"><table><thead><tr><th>Tag ID</th><th>Bag Type</th><th>Alarm Type</th><th>Location</th><th>Last Seen</th><th>Last Seen Location</th><th>Count</th><th>Actions</th></tr></thead><tbody><tr><td colspan="8" class="empty-state"><span aria-hidden="true">▤</span><strong>Report data is not connected</strong><p>Operational records will appear here once the report API is available.</p></td></tr></tbody></table></div>
-        <div class="results-footer"><span>No results loaded</span><div class="pagination"><button type="button" disabled aria-label="Previous page">‹</button><button type="button" class="current" disabled aria-label="Page 1">1</button><button type="button" disabled aria-label="Next page">›</button></div></div>
+        <div class="panel-heading"><h2><span aria-hidden="true">▤</span> Tag Report Results ({{ total }})</h2><div class="result-actions"><button *ngIf="auth.hasAccess('TagReport', 'EXPORT')" type="button" class="secondary" [disabled]="loading || exporting || !total" (click)="exportCsv()" title="Export all results matching the last submitted search">{{ exporting ? 'Exporting…' : '↓ Export CSV' }}</button></div></div>
+        <p *ngIf="exportError" class="validation" role="alert">{{ exportError }}</p>
+        <div class="table-scroll" tabindex="0" aria-label="Tag report results"><table><thead><tr><th scope="col">Tag ID</th><th scope="col">Threat / Alarm</th><th scope="col">Location</th><th scope="col">Last Seen</th><th scope="col">Count</th><th scope="col">Actions</th></tr></thead><tbody>
+          <tr *ngFor="let row of results">
+            <td>{{ row.tagId }}</td><td>{{ row.threat ?? '—' }}<small class="alarm-description">{{ row.alarmType ?? '—' }}</small></td><td>{{ row.location ?? '—' }}</td><td>{{ row.lastSeen ? (row.lastSeen | date:'dd MMM yyyy HH:mm:ss') : '—' }}</td><td>{{ row.count }}</td>
+            <td><button type="button" class="secondary" (click)="openHistory(row)" [attr.aria-label]="'View History for tag ' + row.tagId">View History</button></td>
+          </tr>
+          <tr *ngIf="!results.length"><td colspan="6" class="empty-state" role="status"><span aria-hidden="true">▤</span><strong>{{ loading ? 'Loading report…' : message ? 'Search could not be completed' : searched ? 'No matching tags found' : 'Search to load tagged bags' }}</strong></td></tr>
+        </tbody></table></div>
+        <div class="results-footer"><span>{{ total }} matching tags · Page {{ page }}</span><div class="pagination"><button type="button" [disabled]="loading || page <= 1" (click)="loadPage(page - 1)" aria-label="Previous page">‹</button><button type="button" [disabled]="loading || page * pageSize >= total" (click)="loadPage(page + 1)" aria-label="Next page">›</button></div></div>
       </section>
     </div>
-    <aside *ngIf="historyOpen" class="panel history-panel" aria-label="Tag history">
-      <div class="panel-heading"><h2>Tag History</h2><button class="close-icon" type="button" (click)="historyOpen = false" aria-label="Close tag history">×</button></div>
-      <div class="history-empty"><span aria-hidden="true">◷</span><h3>No tag selected</h3><p>Select View History from a report result to inspect its recorded journey.</p><p class="muted">History becomes available after the report data is connected.</p></div>
-      <button type="button" class="secondary close-history" (click)="historyOpen = false">Close</button>
-    </aside>
   </div>
+  <dialog #historyDialog class="history-dialog" aria-labelledby="tag-history-title" (close)="onHistoryClosed()">
+    <div class="panel-heading"><h2 id="tag-history-title">Tag History</h2><button class="close-icon" type="button" autofocus (click)="closeHistory()" aria-label="Close tag history">×</button></div>
+    <ng-container *ngIf="selectedTag as tag">
+      <div class="tag-header journey-heading"><div><span>Tag ID</span><strong>{{ tag.tagId }}</strong></div><span class="journey-badge" [class.prohibited]="tag.alarmType === 'Prohibited Luggage'">{{ tag.threat ?? '—' }} · {{ tag.alarmType }}</span></div>
+      <div class="tag-header" *ngIf="historyHeader as header"><div><span>BHS Global ID</span><strong>{{ header.globalId ?? '—' }}</strong></div><div><span>IATA ID</span><strong>{{ header.iataCode ?? '—' }}</strong></div><div><span>Last Stage (code)</span><strong>{{ header.lastStage ?? '—' }}</strong></div><div><span>Last Seen Location</span><strong>{{ header.lastSeenLocation ?? '—' }}</strong></div></div>
+      <p class="journey-hint" *ngIf="tag.history?.length">Recorded journey · oldest to newest · scroll horizontally to see all events</p>
+      <div *ngIf="tag.history?.length" class="journey-scroll" tabindex="0" aria-label="Tag journey, oldest to newest. Scroll horizontally for more events.">
+        <ol class="journey-timeline">
+          <li *ngFor="let event of tag.history" class="journey-event" [class.alarm-event]="event.alarmType === '40' || event.alarmType === '41'">
+            <span class="journey-marker" aria-hidden="true">{{ event.alarmType === '40' || event.alarmType === '41' ? '!' : '✓' }}</span>
+            <div class="journey-event-body">
+              <span class="event-state">{{ event.alarmType === '40' || event.alarmType === '41' ? 'Alarm recorded' : 'Event recorded' }}</span>
+              <h3>{{ event.description ?? 'Recorded event' }}</h3>
+              <time>{{ event.time ? (event.time | date:'dd MMM yyyy HH:mm:ss') : 'Time not recorded' }}</time>
+              <p>{{ event.location ?? 'Location not recorded' }}</p>
+              <dl><div><dt>Alarm Type</dt><dd>{{ event.alarmType ?? '—' }}</dd></div><div><dt>SMIS</dt><dd>{{ event.smis === true ? 'True' : event.smis === false ? 'False' : '—' }}</dd></div></dl>
+            </div>
+          </li>
+        </ol>
+      </div>
+      <p *ngIf="!tag.history?.length" class="history-message" role="status">{{ historyLoading ? 'Loading history…' : historyError || 'No recorded history for this tag.' }}</p>
+      <div class="journey-summary" *ngIf="tag.history?.length"><div><span>First recorded event</span><strong>{{ tag.history?.[0]?.time ? (tag.history?.[0]?.time | date:'dd MMM yyyy HH:mm:ss') : '—' }}</strong></div><div><span>Recorded events</span><strong>{{ tag.history?.length }}</strong></div><div><span>Last seen location</span><strong>{{ historyHeader?.lastSeenLocation ?? '—' }}</strong></div></div>
+    </ng-container>
+    <div class="history-actions"><button type="button" class="secondary" (click)="closeHistory()">Close</button></div>
+  </dialog>
 </section>
