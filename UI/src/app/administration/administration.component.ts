@@ -109,19 +109,21 @@ export class AdministrationComponent implements OnInit, OnDestroy {
   setTab(tab: AdministrationTab): void { this.activeTab = tab; this.clearMessages(); }
   openCreateUser(): void { this.editingUser = null; this.userForm = this.emptyUserForm(); this.userDialogOpen = true; this.clearMessages(); }
   openEditUser(user: AdministrationUser): void {
-    if (user.isProtectedSystemAccount) { this.viewingUser = user; return; }
     this.editingUser = user;
     this.userForm = { empCode: user.empCode ?? "", userName: user.userName, firstName: user.firstName ?? "", lastName: user.lastName ?? "", email: user.email ?? "", passportNumber: "", nationality: user.nationality ?? "", designation: user.designation ?? "", password: "", confirmPassword: "", isActive: user.isActive, mustChangePassword: user.mustChangePassword, roleIds: [...user.roleIds] };
     this.userDialogOpen = true; this.clearMessages();
   }
   closeUserDialog(): void { this.userDialogOpen = false; }
+  get editingAdmin(): boolean {
+    return this.editingUser?.roles.some(role => role.trim().toLowerCase() === "admin") ?? false;
+  }
   roleSelected(roleId: number): boolean { return this.userForm.roleIds.includes(roleId); }
   toggleUserRole(roleId: number, checked: boolean): void {
     this.userForm.roleIds = checked ? [...new Set([...this.userForm.roleIds, roleId])] : this.userForm.roleIds.filter((id) => id !== roleId);
   }
 
   saveUser(form: NgForm): void {
-    if (this.editingUser?.isProtectedSystemAccount) return;
+    if (this.editingAdmin && this.editingUser) this.userForm.isActive = this.editingUser.isActive;
     if (this.saving || !form.valid) { form.control.markAllAsTouched(); return; }
     this.clearMessages();
     if (![this.userForm.userName, this.userForm.firstName, this.userForm.lastName, this.userForm.email].every((value) => value.trim())) { this.errorMessage = "User name, first name, last name and email are required."; return; }

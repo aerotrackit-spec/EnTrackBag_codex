@@ -158,27 +158,11 @@
                 </td>
                 <td>{{ formatDate(user.lastLoginAt) }}</td>
                 <td class="row-actions">
-                  @if (
-                    user.isProtectedSystemAccount &&
-                    auth.hasAccess("Users", "VIEW")
-                  ) {
-                    <button
-                      type="button"
-                      title="View Administrator"
-                      (click)="viewingUser = user"
-                    >
-                      View
-                    </button>
-                  }
                   @if (auth.hasAccess("Users", "EDIT")) {
                     <button
                       type="button"
                       title="Edit user"
-                      [disabled]="user.isProtectedSystemAccount"
-                      [class.action-disabled]="user.isProtectedSystemAccount"
-                      (click)="
-                        !user.isProtectedSystemAccount && openEditUser(user)
-                      "
+                      (click)="openEditUser(user)"
                     >
                       ✎
                     </button>
@@ -611,6 +595,7 @@
               type="checkbox"
               name="isActive"
               [(ngModel)]="userForm.isActive"
+              [disabled]="editingAdmin"
             /><span>Active account</span></label
           >
         </div>
