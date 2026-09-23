@@ -121,6 +121,7 @@ export class AdministrationComponent implements OnInit, OnDestroy {
   }
 
   saveUser(form: NgForm): void {
+    if (this.editingUser?.isProtectedSystemAccount) return;
     if (this.saving || !form.valid) { form.control.markAllAsTouched(); return; }
     this.clearMessages();
     if (![this.userForm.userName, this.userForm.firstName, this.userForm.lastName, this.userForm.email].every((value) => value.trim())) { this.errorMessage = "User name, first name, last name and email are required."; return; }

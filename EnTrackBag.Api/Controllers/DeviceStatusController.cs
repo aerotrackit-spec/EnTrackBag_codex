@@ -16,7 +16,8 @@ public class DeviceStatusController : ControllerBase
     }
 
     [HttpGet("summary")]
-    public async Task<IActionResult> GetSummary(CancellationToken ct) => Ok(await _deviceStatusDomainComponent.GetSummaryAsync(ct));
+    public async Task<IActionResult> GetSummary(CancellationToken ct)
+        => Ok(await _deviceStatusDomainComponent.GetSummaryAsync(ct));
 
     [HttpGet("details")]
     public async Task<IActionResult> GetDetails([FromQuery] string? category, CancellationToken ct)

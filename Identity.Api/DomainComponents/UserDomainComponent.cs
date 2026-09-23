@@ -182,7 +182,7 @@ public class UserDomainComponent : IUserDomainComponent
         var roleNames = knownRoles is null
             ? user.UserRoles.Select(x => x.Role.Name).OrderBy(x => x).ToArray()
             : knownRoles.Where(x => roleIds.Contains(x.Id)).Select(x => x.Name).OrderBy(x => x).ToArray();
-        return new UserListItemDto { IsProtectedSystemAccount=SystemAccount.IsProtected(user), Id=user.Id, EmpCode=user.EmpCode, UserName=user.UserName, FirstName=user.FirstName,
+        return new UserListItemDto { IsProtectedSystemAccount=roleNames.Any(SystemAccount.IsAdminRole), Id=user.Id, EmpCode=user.EmpCode, UserName=user.UserName, FirstName=user.FirstName,
             LastName=user.LastName, DisplayName=user.DisplayName ?? user.UserName, Email=user.Email,
             PassportMasked=MaskPassport(user.PassportLast4), Nationality=user.Nationality, Designation=user.Designation, IsActive=user.IsActive,
             MustChangePassword=user.MustChangePassword, LastLoginAt=user.LastLoginAt, LastLogoutAt=user.LastLogoutAt,

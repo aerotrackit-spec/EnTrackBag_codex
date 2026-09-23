@@ -1,0 +1,43 @@
+<section class="tag-report-page" aria-label="Tag report">
+  <div class="report-toolbar">
+    <span>Search tagged bags by bag type, alarm type and date range.</span>
+  </div>
+  <p class="integration-note" role="status">Report data connection pending. Filters are available below; search, history and export require the report API.</p>
+  <div class="report-layout" [class.history-closed]="!historyOpen">
+    <div class="report-main">
+      <section class="panel filter-panel">
+        <h2><span aria-hidden="true">⊡</span> Search &amp; Filter</h2>
+        <form #filters="ngForm" (ngSubmit)="search(filters)">
+          <div class="filter-grid">
+            <label class="tag-field">Tag ID<div class="search-input"><input name="tagId" [(ngModel)]="tagId" placeholder="Enter Tag ID" maxlength="128"><span aria-hidden="true">⌕</span></div></label>
+            <fieldset class="bag-types"><legend>Bag Type</legend><div class="switches">
+              <label class="switch-label"><input type="checkbox" name="prohibited" [(ngModel)]="prohibited"><span class="switch-track" aria-hidden="true"></span>Prohibited Bag</label>
+              <label class="switch-label"><input type="checkbox" name="normal" [(ngModel)]="normal"><span class="switch-track" aria-hidden="true"></span>Normal Bag</label>
+            </div>
+            <div class="alarm-field"><span>Suspect Bag (Alarm Type)</span><details class="alarm-picker"><summary>{{ selectedCount }} selected <span aria-hidden="true">⌄</span></summary>
+              <div class="alarm-options"><label class="select-all"><input type="checkbox" [checked]="selectedCount === alarms.length" [indeterminate]="selectedCount > 0 && selectedCount < alarms.length" (change)="selectAll($any($event.target).checked)">Select All</label>
+                <label *ngFor="let alarm of alarms"><input type="checkbox" [(ngModel)]="alarm.selected" [ngModelOptions]="{standalone: true}">{{ alarm.name }}</label>
+              </div>
+            </details></div></fieldset>
+          </div>
+          <div class="period-actions"><fieldset class="period"><legend>Period</legend><div class="period-inputs">
+            <label>From<input type="datetime-local" name="from" [(ngModel)]="from" #fromInput="ngModel" required [max]="to"></label><span aria-hidden="true">–</span><label>To<input type="datetime-local" name="to" [(ngModel)]="to" #toInput="ngModel" required [min]="from"></label>
+          </div></fieldset><div class="form-actions"><button type="button" class="secondary" (click)="clear(filters)">↻ &nbsp; Clear</button><button type="submit" class="primary" [disabled]="filters.invalid || invalidPeriod || !hasBagType">⌕ &nbsp; Search</button></div></div>
+          <p class="validation" *ngIf="(fromInput.touched || toInput.touched || submitted) && (!from || !to || invalidPeriod)">Enter a valid period with From no later than To.</p>
+          <p class="validation" *ngIf="!hasBagType">Select a bag type or a suspect alarm type.</p>
+          <p class="search-message" *ngIf="message" role="status">{{ message }}</p>
+        </form>
+      </section>
+      <section class="panel results-panel">
+        <div class="panel-heading"><h2><span aria-hidden="true">▤</span> Tag Report Results (—)</h2><div class="result-actions"><button *ngIf="!historyOpen" type="button" class="secondary" (click)="historyOpen = true">Tag History</button><button type="button" class="secondary" disabled title="Available when report results are loaded">↓ &nbsp; Export</button></div></div>
+        <div class="table-scroll" tabindex="0" aria-label="Tag report results"><table><thead><tr><th>Tag ID</th><th>Bag Type</th><th>Alarm Type</th><th>Location</th><th>Last Seen</th><th>Last Seen Location</th><th>Count</th><th>Actions</th></tr></thead><tbody><tr><td colspan="8" class="empty-state"><span aria-hidden="true">▤</span><strong>Report data is not connected</strong><p>Operational records will appear here once the report API is available.</p></td></tr></tbody></table></div>
+        <div class="results-footer"><span>No results loaded</span><div class="pagination"><button type="button" disabled aria-label="Previous page">‹</button><button type="button" class="current" disabled aria-label="Page 1">1</button><button type="button" disabled aria-label="Next page">›</button></div></div>
+      </section>
+    </div>
+    <aside *ngIf="historyOpen" class="panel history-panel" aria-label="Tag history">
+      <div class="panel-heading"><h2>Tag History</h2><button class="close-icon" type="button" (click)="historyOpen = false" aria-label="Close tag history">×</button></div>
+      <div class="history-empty"><span aria-hidden="true">◷</span><h3>No tag selected</h3><p>Select View History from a report result to inspect its recorded journey.</p><p class="muted">History becomes available after the report data is connected.</p></div>
+      <button type="button" class="secondary close-history" (click)="historyOpen = false">Close</button>
+    </aside>
+  </div>
+</section>

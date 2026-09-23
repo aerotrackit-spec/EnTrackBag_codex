@@ -1,25 +1,63 @@
-<section>
-  <div class="cards">
-    <button type="button" (click)="load('Tagging Station')"><b>{{ summary?.taggingStations?.total ?? '—' }}</b><span>Total Tagging Stations</span><small>Online {{ summary?.taggingStations?.online ?? '—' }} · Offline {{ summary?.taggingStations?.offline ?? '—' }}</small></button>
-    <button type="button" (click)="load('Reader')"><b>{{ summary?.readers?.total ?? '—' }}</b><span>Total Readers</span></button>
-    <button type="button" (click)="load('Antenna')"><b>{{ summary?.antennas?.total ?? '—' }}</b><span>Configured Antenna Records</span></button>
-    <button type="button" (click)="load('Controller')"><b>{{ summary?.controllers?.total ?? '—' }}</b><span>Total Controllers</span></button>
+<section class="device-page" aria-label="Device and system status" [attr.aria-busy]="loading">
+  <div class="refresh-bar">
+    <span class="live-label">Current device status</span>
   </div>
-
-  <div class="legend">
-    <span><i class="online"></i>Online</span><span><i class="warning"></i>Warning</span><span><i class="offline"></i>Offline</span><span><i class="unknown"></i>Idle / Unknown</span>
+  <p *ngIf="error" class="error" role="alert">{{ error }}</p>
+  <div class="metric-cards">
+    <button *ngFor="let card of categories" type="button" class="metric-card" [class.selected]="selectedCategory === card.category" [attr.aria-pressed]="selectedCategory === card.category" (click)="selectCategory(card.category)">
+      <span class="metric-icon" [ngClass]="card.color" aria-hidden="true">{{ card.icon }}</span>
+      <span class="metric-content"><strong>{{ card.title }}</strong><b>{{ summary?.[card.key]?.total ?? '—' }}</b>
+        <span class="metric-counts"><span><i class="dot online"></i>Online {{ summary?.[card.key]?.online ?? '—' }}</span><span><i class="dot offline"></i>Offline {{ summary?.[card.key]?.offline ?? '—' }}</span></span>
+      </span>
+    </button>
   </div>
-
-  <div class="table-panel">
-    <h2>Device Details{{ selectedCategory ? ' — ' + selectedCategory : '' }}</h2>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Device Category</th><th>Device Name</th><th>Device Location</th><th>Status</th><th>IP</th><th>Last Error</th></tr></thead>
-        <tbody>
-          <tr *ngFor="let d of details"><td>{{ d.category }}</td><td>{{ d.name }}</td><td>{{ d.location }}</td><td><span class="status" [class.online-text]="d.status==='Online'" [class.warning-text]="d.status==='Warning'" [class.offline-text]="d.status==='Offline'">{{ d.status }}</span></td><td>{{ d.ip }}</td><td>{{ d.lastError || '—' }}</td></tr>
-          <tr *ngIf="details.length === 0"><td colspan="6" class="empty">No device records returned.</td></tr>
-        </tbody>
+  <div class="status-charts-row">
+  <section class="panel grouped-chart" aria-label="Device category status">
+    <div class="panel-heading"><h2>Device Categories</h2><button type="button" class="clear-button" (click)="selectCategory()">Clear selection</button></div>
+    <div class="chart-legend"><span><i class="dot online"></i>Online</span><span><i class="dot offline"></i>Offline</span></div>
+    <div class="column-chart-scroll" tabindex="0" aria-label="Device counts by category; scroll horizontally on smaller screens">
+      <div class="column-chart">
+        <div class="chart-axis" aria-hidden="true"><span *ngFor="let tick of chartTicks">{{ tick }}</span></div>
+        <div class="chart-groups">
+          <button *ngFor="let card of deviceTypes" type="button" class="column-group" [class.selected]="selectedCategory === card.category" [attr.aria-pressed]="selectedCategory === card.category" [attr.aria-label]="card.category + (lastRefreshed ? ': Online ' + card.online + ', Offline ' + card.offline : ': data not loaded') + '. Filter device details.'" (click)="selectCategory(card.category)">
+            <span class="column-pair" aria-hidden="true">
+              <span class="chart-column online" [style.height.%]="card.online / chartMaximum * 100"><b>{{ lastRefreshed ? card.online : '—' }}</b></span>
+              <span class="chart-column offline" [style.height.%]="card.offline / chartMaximum * 100"><b>{{ lastRefreshed ? card.offline : '—' }}</b></span>
+            </span>
+            <span class="column-label">{{ card.category }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="panel combined-overview" aria-label="System overview">
+    <h2>System Overview</h2>
+    <div *ngIf="systemOverview as overview; else overviewUnavailable" class="combined-content">
+      <div class="combined-donut" [class.no-devices]="overview.total === 0" [style.background]="overview.background" role="img" [attr.aria-label]="'Total ' + overview.total + ', Online ' + overview.online + ', Offline ' + overview.offline">
+        <div class="combined-center"><b>{{ overview.total }}</b><span>Total devices</span></div>
+      </div>
+      <dl class="combined-counts">
+        <div><dt><i class="dot online"></i>Online</dt><dd>{{ overview.online }} <span>({{ overview.onlinePercent | number:'1.2-2' }}%)</span></dd></div>
+        <div><dt><i class="dot offline"></i>Offline</dt><dd>{{ overview.offline }} <span>({{ overview.offlinePercent | number:'1.2-2' }}%)</span></dd></div>
+      </dl>
+      <p class="data-note">Tagging Stations + Readers + Antennas + Controllers.<br>Offline = Total − Online.<span *ngIf="overview.total === 0"><br>No devices returned.</span></p>
+    </div>
+    <ng-template #overviewUnavailable><p class="data-note">{{ loading ? 'Loading device totals…' : 'Complete device totals are not available.' }}</p></ng-template>
+  </section>
+  </div>
+  <section class="panel details-panel">
+    <h2>Device Details</h2><p class="details-caption">Showing details for: <strong>{{ selectedCategory || 'All logical device types' }}</strong></p>
+    <div class="table-wrap details-scroll" tabindex="0" aria-label="Device details, scroll for more columns">
+      <table><thead><tr><th scope="col">ID</th><th scope="col">Status</th><th scope="col">Device Type</th><th scope="col">Device Code / Name</th><th scope="col">Location</th><th scope="col">IP Address</th><th scope="col">Last Connected</th><th *ngFor="let port of antennaPorts" scope="col">A{{ port }}</th><th scope="col">Last Disconnected</th><th scope="col">Last Error</th></tr></thead>
+        <tbody><tr *ngFor="let d of details">
+          <td>{{ d.id ?? '—' }}</td>
+          <td><span class="device-status" [class.online-text]="d.status === 'Online'" [class.offline-text]="d.status === 'Offline'"><span aria-hidden="true">{{ d.status === 'Online' ? '●' : '⊗' }}</span>{{ d.status }}</span></td>
+          <td>{{ d.category }}</td><td>{{ d.name }}</td><td>{{ d.location || '—' }}</td><td>{{ d.ipAddress || '—' }}</td><td>{{ d.lastConnected ? (d.lastConnected | date:'dd MMM yyyy HH:mm') : '—' }}</td>
+          <td *ngFor="let port of antennaPorts"><span class="antenna-state" [class.connected]="d.antennaPorts?.[port - 1] === 'Y'" [class.disconnected]="d.antennaPorts?.[port - 1] === 'N'">{{ d.antennaPorts?.[port - 1] || '—' }}</span></td>
+          <td>{{ d.lastDisconnected ? (d.lastDisconnected | date:'dd MMM yyyy HH:mm') : '—' }}</td><td>{{ d.lastError || '—' }}</td>
+        </tr><tr *ngIf="!details.length"><td colspan="17" class="empty">{{ loading ? 'Loading device records…' : 'No device records returned.' }}</td></tr></tbody>
       </table>
     </div>
-  </div>
+    <p class="data-note">A1–A8: Y = connected, N = disconnected, X = unconfigured, — = not applicable. Logical-device status uses a one-minute heartbeat.</p>
+  </section>
 </section>

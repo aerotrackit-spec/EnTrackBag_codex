@@ -4,7 +4,6 @@ namespace Identity.Api.Data.Repositories;
 
 public interface IAdministrationRepository
 {
-    Task<bool> RoleHasSystemAccountAsync(int roleId, CancellationToken ct);
     Task<RoleEntity[]> GetRolesAsync(CancellationToken ct);
     Task<RoleEntity?> GetRoleAsync(int id, CancellationToken ct);
     Task<PermissionEntity[]> GetPermissionsAsync(CancellationToken ct);

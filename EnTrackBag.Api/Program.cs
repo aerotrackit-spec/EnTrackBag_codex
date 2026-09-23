@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<EnTrackBag.Sessions.SessionRepository>();
 builder.Host.UseWindowsService();

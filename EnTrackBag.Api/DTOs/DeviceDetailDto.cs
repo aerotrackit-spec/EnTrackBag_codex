@@ -1,2 +1,3 @@
 namespace EnTrackBag.Api.DTOs;
-public record DeviceDetailDto(string Category,string Name,string? Location,string Status,string? IpAddress,string? LastError,DateTime? LastConnected,DateTime? LastDisconnected);
+public record DeviceDetailDto(string Category,string Name,string? Location,string Status,string? IpAddress,string? LastError,DateTime? LastConnected,DateTime? LastDisconnected,
+    int? Id = null, int? DeviceType = null, IReadOnlyList<string>? AntennaPorts = null);

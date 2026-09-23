@@ -54,7 +54,7 @@ public AuthController(IIdentityDomainComponent identityDomainComponent)
 
 The checked-in entity properties are based only on the currently verified schema notes. Before production use, regenerate/verify them against the exact target `BLTSMFT` database.
 
-See `Documentation/NAMING-AND-ARCHITECTURE.md` and `EnTrackBag-Final-Project-Prompt.md` for the mandatory naming, constructor injection and Database-First rules.
+See `Documentation/NAMING-AND-ARCHITECTURE.md` and `EnTrackBag-Master-Prompt.md` for the mandatory naming, constructor injection and Database-First rules. `EnTrackBag-Master-Prompt.md` is the single maintained project prompt, including current requirements, Git workflow, SQL deployment and pending work.
 
 
 ## Permission access types

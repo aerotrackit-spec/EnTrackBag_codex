@@ -1,8 +1,8 @@
+using EnTrackBag.Api.DomainComponents;
+using EnTrackBag.Sessions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
-using EnTrackBag.Sessions;
-using EnTrackBag.Api.DomainComponents;
 using System.Text.Json;
 
 namespace EnTrackBag.Api.Hubs;
@@ -13,7 +13,13 @@ public class MonitoringHub : Hub
     private readonly SessionRepository _sessions;
     private readonly IServiceScopeFactory _scopes;
     private readonly IHubContext<MonitoringHub> _hub;
-    public MonitoringHub(SessionRepository sessions, IServiceScopeFactory scopes, IHubContext<MonitoringHub> hub) { _sessions = sessions; _scopes = scopes; _hub = hub; }
+
+    public MonitoringHub(SessionRepository sessions, IServiceScopeFactory scopes, IHubContext<MonitoringHub> hub)
+    {
+        _sessions = sessions;
+        _scopes = scopes;
+        _hub = hub;
+    }
 
     public void SubscribePage(string channel)
     {
@@ -46,11 +52,16 @@ public class MonitoringHub : Hub
             while (await timer.WaitForNextTickAsync(context.ConnectionAborted))
             {
                 if (!await _sessions.ValidateAsync(sid, uid, context.ConnectionAborted))
-                { context.Abort(); return; }
+                {
+                    context.Abort();
+                    return;
+                }
                 // Reuse the session watcher; read only the subscribed page every 15 seconds.
-                if (++ticks % 3 != 0) continue;
+                if (++ticks % 3 != 0)
+                    continue;
                 var channel = context.Items.TryGetValue("channel", out var selected) ? selected as string : "";
-                if (string.IsNullOrEmpty(channel)) continue;
+                if (string.IsNullOrEmpty(channel))
+                    continue;
                 try
                 {
                     using var scope = _scopes.CreateScope();
@@ -69,13 +80,18 @@ public class MonitoringHub : Hub
                     else
                     {
                         var devices = scope.ServiceProvider.GetRequiredService<IDeviceStatusDomainComponent>();
-                        payload = new { summary = await devices.GetSummaryAsync(context.ConnectionAborted),
-                            details = await devices.GetDetailsAsync(null, context.ConnectionAborted) };
+                        payload = new
+                        {
+                            summary = await devices.GetSummaryAsync(context.ConnectionAborted),
+                            details = await devices.GetDetailsAsync(null, context.ConnectionAborted)
+                        };
                         eventName = "SystemUpdated";
                     }
                     var serialized = JsonSerializer.Serialize(payload);
-                    if (previousChannel == channel && previous == serialized) continue;
-                    previousChannel = channel; previous = serialized;
+                    if (previousChannel == channel && previous == serialized)
+                        continue;
+                    previousChannel = channel;
+                    previous = serialized;
                     await _hub.Clients.Client(context.ConnectionId).SendAsync(eventName, payload, context.ConnectionAborted);
                     if (channel == "Dashboard.SLA")
                     {

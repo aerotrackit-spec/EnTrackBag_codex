@@ -44,11 +44,6 @@
               }
             </div>
           }
-          @if (pageHeader.action === 'admin-refresh') {
-            <button class="page-refresh-button" type="button" (click)="onAdminRefresh()">
-              <span aria-hidden="true">↻</span> Refresh
-            </button>
-          }
 
           <button class="icon-button" type="button" aria-label="Notifications" (click)="notifications.refresh()" [attr.title]="notifications.count() ? notifications.count() + ' SLA notifications' : 'No notifications'">
             <img [src]="notifications.count() ? 'assets/notification-active.png' : 'assets/notification-empty.png'" alt="">
@@ -79,7 +74,13 @@
         </div>
       </header>
 
-      <main class="page-shell-viewport"><router-outlet></router-outlet></main>
+      <main class="page-shell-viewport">
+        <router-outlet></router-outlet>
+        <footer class="page-footer">
+          <span>ⓘ Times shown in your browser’s local time.</span>
+          <span>EnTrackBag © {{ currentYear }}</span>
+        </footer>
+      </main>
     </div>
   </div>
 }
